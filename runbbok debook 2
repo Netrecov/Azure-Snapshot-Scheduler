@@ -12,28 +12,28 @@ param (
 # Login to Azure using managed identity
 $AzureContext = (Connect-AzAccount -Identity).Context
 
-# Select the specified subscription
-$null = Select-AzSubscription -SubscriptionId $subscriptionId -DefaultProfile $AzureContext
+# Explicitly set the context to the specified subscription
+Set-AzContext -SubscriptionId $subscriptionId -TenantId $AzureContext.Tenant.Id
 
 # Verify the current subscription context
-$currentContext = Get-AzContext -DefaultProfile $AzureContext
+$currentContext = Get-AzContext
 Write-Output "Current Subscription ID: $($currentContext.Subscription.Id)"
 Write-Output "Current Subscription Name: $($currentContext.Subscription.Name)"
 
 # List all resource groups in the subscription
-$resourceGroups = Get-AzResourceGroup -DefaultProfile $AzureContext
+$resourceGroups = Get-AzResourceGroup
 foreach ($rg in $resourceGroups) {
     Write-Output "Resource Group: $($rg.ResourceGroupName) in Subscription: $($currentContext.Subscription.Name)"
 }
 
 # Check if the resource group exists
-$resourceGroup = Get-AzResourceGroup -Name $resourceGroupName -DefaultProfile $AzureContext
+$resourceGroup = Get-AzResourceGroup -Name $resourceGroupName
 if ($null -eq $resourceGroup) {
     throw "Resource group '$resourceGroupName' not found in subscription '$subscriptionId'."
 } else {
 
     # Get the VM
-    $vm = Get-AzVM -ResourceGroupName $resourceGroupName -Name $vmName -DefaultProfile $AzureContext
+    $vm = Get-AzVM -ResourceGroupName $resourceGroupName -Name $vmName
     if ($null -eq $vm) {
         throw "VM '$vmName' not found in resource group '$resourceGroupName'."
     }
@@ -43,7 +43,7 @@ if ($null -eq $resourceGroup) {
 
     # Create the snapshot
     $snapshotName = "$vmName-snapshot-$(Get-Date -Format yyyyMMddHHmmss)"
-    $snapshot = New-AzSnapshot -ResourceGroupName $resourceGroupName -SnapshotName $snapshotName -Snapshot $snapshotConfig -DefaultProfile $AzureContext
+    $snapshot = New-AzSnapshot -ResourceGroupName $resourceGroupName -SnapshotName $snapshotName -Snapshot $snapshotConfig
 
     Write-Output "Snapshot $snapshotName created successfully."
 }
