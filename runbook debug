@@ -16,9 +16,10 @@ $AzureContext = (Connect-AzAccount -Identity).Context
 Set-AzContext -SubscriptionId $subscriptionId -DefaultProfile $AzureContext
 
 # List all resource groups in the subscription
+$subscriptionName = (Get-AzContext -DefaultProfile $AzureContext).Subscription.Name
 $resourceGroups = Get-AzResourceGroup -DefaultProfile $AzureContext
 foreach ($rg in $resourceGroups) {
-    Write-Output "Resource Group: $($rg.ResourceGroupName)"
+    Write-Output "Resource Group: $($rg.ResourceGroupName) in Subscription: $subscriptionName"
 }
 
 # Check if the resource group exists
