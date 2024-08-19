@@ -1,0 +1,43 @@
+param (
+    [Parameter(Mandatory=$true)]
+    [string] $resourceGroupName,
+
+    [Parameter(Mandatory=$true)]
+    [string] $vmName,
+
+    [Parameter(Mandatory=$true)]
+    [string] $subscriptionId
+)
+
+# Login to Azure using managed identity
+$AzureContext = (Connect-AzAccount -Identity).Context
+
+# Set the context to the specified subscription
+Set-AzContext -SubscriptionId $subscriptionId -DefaultProfile $AzureContext
+
+# List all resource groups in the subscription
+$resourceGroups = Get-AzResourceGroup -DefaultProfile $AzureContext
+foreach ($rg in $resourceGroups) {
+    Write-Output "Resource Group: $($rg.ResourceGroupName)"
+}
+
+# Check if the resource group exists
+$resourceGroup = Get-AzResourceGroup -Name $resourceGroupName -DefaultProfile $AzureContext
+if ($null -eq $resourceGroup) {
+    throw "Resource group '$resourceGroupName' not found in subscription '$subscriptionId'."
+}
+
+# Get the VM
+$vm = Get-AzVM -ResourceGroupName $resourceGroupName -Name $vmName -DefaultProfile $AzureContext
+if ($null -eq $vm) {
+    throw "VM '$vmName' not found in resource group '$resourceGroupName'."
+}
+
+# Create the snapshot configuration
+$snapshotConfig = New-AzSnapshotConfig -SourceUri $vm.StorageProfile.OsDisk.ManagedDisk.Id -Location $vm.Location -CreateOption Copy
+
+# Create the snapshot
+$snapshotName = "$vmName-snapshot-$(Get-Date -Format yyyyMMddHHmmss)"
+$snapshot = New-AzSnapshot -ResourceGroupName $resourceGroupName -SnapshotName $snapshotName -Snapshot $snapshotConfig -DefaultProfile $AzureContext
+
+Write-Output "Snapshot $snapshotName created successfully."
