@@ -26,7 +26,7 @@ foreach ($rg in $resourceGroups) {
 $resourceGroup = Get-AzResourceGroup -Name $resourceGroupName -DefaultProfile $AzureContext
 if ($null -eq $resourceGroup) {
     throw "Resource group '$resourceGroupName' not found in subscription '$subscriptionId'."
-}
+} else {
 
 # Get the VM
 $vm = Get-AzVM -ResourceGroupName $resourceGroupName -Name $vmName -DefaultProfile $AzureContext
@@ -42,3 +42,4 @@ $snapshotName = "$vmName-snapshot-$(Get-Date -Format yyyyMMddHHmmss)"
 $snapshot = New-AzSnapshot -ResourceGroupName $resourceGroupName -SnapshotName $snapshotName -Snapshot $snapshotConfig -DefaultProfile $AzureContext
 
 Write-Output "Snapshot $snapshotName created successfully."
+}
