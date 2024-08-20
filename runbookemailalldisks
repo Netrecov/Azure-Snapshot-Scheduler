@@ -62,7 +62,7 @@ if ($null -eq $resourceGroup) {
 
     # Send email notification using anonymous authentication
     $subject = "Azure Snapshots Created for VM: $vmName"
-    $body = "The following snapshots were created for VM $vmName in resource group $resourceGroupName:`n`n$($snapshotNames -join "`n")"
+    $body = "The following snapshots were created for VM $vmName in resource group $resourceGroupName:`n`n$($snapshotNames -join \"`n\")"
 
     Send-MailMessage -To $emailTo -From $smtpFrom -Subject $subject -Body $body -SmtpServer $smtpServer -UseSsl
 }
