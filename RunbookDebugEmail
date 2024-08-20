@@ -1,0 +1,70 @@
+param (
+    [Parameter(Mandatory=$true)]
+    [string] $resourceGroupName,
+
+    [Parameter(Mandatory=$true)]
+    [string] $vmName,
+
+    [Parameter(Mandatory=$true)]
+    [string] $subscriptionId,
+
+    [Parameter(Mandatory=$true)]
+    [string] $emailTo,  # Email address to send the notification to
+
+    [Parameter(Mandatory=$true)]
+    [string] $smtpServer,  # SMTP server address
+
+    [Parameter(Mandatory=$true)]
+    [string] $smtpFrom,  # Sender email address
+
+    [Parameter(Mandatory=$true)]
+    [string] $smtpUser,  # SMTP username
+
+    [Parameter(Mandatory=$true)]
+    [string] $smtpPassword  # SMTP password
+)
+
+# Login to Azure using managed identity
+$AzureContext = (Connect-AzAccount -Identity).Context
+
+# Explicitly set the context to the specified subscription
+Set-AzContext -SubscriptionId $subscriptionId -TenantId $AzureContext.Tenant.Id
+
+# Verify the current subscription context
+$currentContext = Get-AzContext
+Write-Output "Current Subscription ID: $($currentContext.Subscription.Id)"
+Write-Output "Current Subscription Name: $($currentContext.Subscription.Name)"
+
+# List all resource groups in the subscription
+$resourceGroups = Get-AzResourceGroup
+foreach ($rg in $resourceGroups) {
+    Write-Output "Resource Group: $($rg.ResourceGroupName) in Subscription: $($currentContext.Subscription.Name)"
+}
+
+# Check if the resource group exists
+$resourceGroup = Get-AzResourceGroup -Name $resourceGroupName
+if ($null -eq $resourceGroup) {
+    throw "Resource group '$resourceGroupName' not found in subscription '$subscriptionId'."
+} else {
+
+    # Get the VM
+    $vm = Get-AzVM -ResourceGroupName $resourceGroupName -Name $vmName
+    if ($null -eq $vm) {
+        throw "VM '$vmName' not found in resource group '$resourceGroupName'."
+    }
+
+    # Create the snapshot configuration
+    $snapshotConfig = New-AzSnapshotConfig -SourceUri $vm.StorageProfile.OsDisk.ManagedDisk.Id -Location $vm.Location -CreateOption Copy
+
+    # Create the snapshot
+    $snapshotName = "$vmName-snapshot-$(Get-Date -Format yyyyMMddHHmmss)"
+    $snapshot = New-AzSnapshot -ResourceGroupName $resourceGroupName -SnapshotName $snapshotName -Snapshot $snapshotConfig
+
+    Write-Output "Snapshot $snapshotName created successfully."
+
+    # Send email notification
+    $subject = "Azure Snapshot Created: $snapshotName"
+    $body = "The snapshot $snapshotName for VM $vmName in resource group $resourceGroupName has been created successfully."
+
+    Send-MailMessage -To $emailTo -From $smtpFrom -Subject $subject -Body $body -SmtpServer $smtpServer -Credential (New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $smtpUser, (ConvertTo-SecureString $smtpPassword -AsPlainText -Force)) -UseSsl
+}
